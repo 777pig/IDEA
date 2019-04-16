@@ -1,0 +1,3 @@
+taotao-sso=http://192.168.43.42:8081/taotaoshopping-sso/islogin.do
+taotao-sytem1-verify=http://192.168.43.42:8082/taotaoshopping.system1/st/verify.do
+token-verify-error=http://192.168.43.42:8081/taotaoshopping-sso/error.jsp

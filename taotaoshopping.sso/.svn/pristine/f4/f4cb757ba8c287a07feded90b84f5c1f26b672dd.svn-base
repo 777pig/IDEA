@@ -1,0 +1,5 @@
+package com.bean;
+
+public class text_class {
+	private int  id;
+}

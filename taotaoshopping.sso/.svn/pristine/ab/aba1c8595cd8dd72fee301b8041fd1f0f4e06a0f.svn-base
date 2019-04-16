@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>                 
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	id="WebApp_ID" version="2.5">
+
+	<welcome-file-list>
+		<welcome-file>index.jsp</welcome-file>
+	</welcome-file-list>
+ 
+  	<context-param>
+ 			<param-name>contextConfigLocation</param-name>
+			<param-value>classpath:springmvc.xml</param-value>
+ 	</context-param>
+ 
+	<!-- 使用监听器加载Spring配置文件 --><!-- 三大器 -->
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
+
+	<!-- 设置请求器可以把网页post请求转换为其他格式 rest -->
+	<filter>
+		<filter-name>HiddenHttpMethodFilter</filter-name>
+		<filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
+	</filter>
+
+	<!-- 配置SrpingMVC的前端控制器 这个控制器可以吧post请求转换为其他的格式的请求,比如delete或put格式 -->
+	<servlet>
+		<servlet-name>springmvc</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+
+	<init-param>
+ 			<param-name>contextConfigLocation</param-name>
+			<param-value>classpath:springmvc.xml</param-value>
+ 	</init-param>
+		<!-- 也可以不适用默认的方式来初始化servlet ,而使用自定义的xml文件 格式必须是 以-servlet.xml文件结尾,以/web-inf/ 
+			开头 -->
+ 	<!-- 配置spring -->
+	</servlet>
+
+
+	<servlet-mapping>
+		<servlet-name>springmvc</servlet-name>
+		<!-- 配置所有以do结尾的请求进入SpringMVC 的监控 -->
+		<url-pattern>*.do</url-pattern>
+	</servlet-mapping>
+
+
+	<!-- 解决post中文乱码问题 ,get乱码通过service.xml文件 -->
+	<filter>
+		<filter-name>encoding</filter-name>
+		<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+		<!-- 设置编码参是UTF8 -->
+		<init-param>
+			<param-name>encoding</param-name>
+			<param-value>UTF-8</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>encoding</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
+</web-app>
