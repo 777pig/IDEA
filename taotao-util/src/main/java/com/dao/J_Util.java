@@ -1,0 +1,607 @@
+﻿package com.dao;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+
+/**
+ * 围绕着核心增删改查功能实现封装
+ * 
+ * @author Administrator
+ *
+ */
+public class J_Util {
+
+	/**
+	 * 这里不可以设置为一个静态变量否则在使用事务时会造成冲突，因为静态变量在内存初始化过程中只能执行一次
+	 */
+	private static Connection connection;
+	private Statement statement;
+	private ResultSet resultset;
+	private ResultSetMetaData rsmd;
+	private PreparedStatement pre = null;
+	// 可以单独设置要连接的数据库名
+	public String libraryname = "taotao";
+	// public String libraryname = "javaweb";
+
+	private static J_Util instance = null;
+
+	private J_Util() {
+		getConnection();
+	}
+
+	/**
+	 * 获取当前类的实列
+	 * 
+	 * @return
+	 */
+	public static J_Util getInstance() {
+		if (instance == null)
+			instance = new J_Util();
+		return instance;
+	}
+
+	/**
+	 * 连接数据库的方法
+	 */
+	public Connection getConnection() {
+		String url = "jdbc:mysql://127.0.0.1:3306/" + libraryname + "?serverTimezone=GMT%2B8";
+		String user = "root";
+		String passwd = "123456";
+		String driverClass = "com.mysql.cj.jdbc.Driver";
+		try {
+			Properties pr = new Properties();
+			InputStream s = ClassLoader.getSystemResourceAsStream("jdbc.properties");
+			if (s != null) {
+				pr.load(s);
+				url = pr.getProperty("url");
+				user = pr.getProperty("username");
+				passwd = pr.getProperty("password");
+				driverClass = pr.getProperty("driverClassName");
+			}
+			Class.forName(driverClass);
+			connection = DriverManager.getConnection(url, user, passwd);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return connection;
+	}
+
+	/**
+	 * 封装的查询方法 传入实体的反射 sql语句 实体的？号替换值 运用反射的方法 表中字段必须和类字段一致
+	 */
+	public <T> T get_entity(Class<T> clazz, String sql, Object... args)
+			throws ClassNotFoundException, IOException, Exception {
+		T entity = clazz.newInstance();
+
+		pre = connection.prepareStatement(sql);
+
+		for (int i = 0; i < args.length; i++) {
+			pre.setObject(i + 1, args[i]);
+		}
+		resultset = pre.executeQuery();
+		rsmd = resultset.getMetaData();
+
+		while (resultset.next()) {
+			for (int i = 0; i < rsmd.getColumnCount(); i++) {
+				Object obj = resultset.getObject(i + 1);
+				String name = rsmd.getColumnName(i + 1);
+				Field f = null;
+				try {
+					f = entity.getClass().getDeclaredField(name);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				f.setAccessible(true);
+				f.set(entity, obj);
+			}
+			break;
+		}
+
+		return entity;
+
+	}
+
+	/**
+	 * 查询返回实体的集合 运用的方法是beanutils的工具包 通过封装的get和set方法 必须类字段和表中字段一致
+	 */
+	public <T> ArrayList<T> get_entitys(Class<T> clazz, String sql, Object... args) {
+		ArrayList<T> entity_list = null;
+		try {
+			T entity = clazz.newInstance();
+			entity_list = new ArrayList();
+			pre = connection.prepareStatement(sql);
+			for (int i = 0; i < args.length; i++) {
+				pre.setObject(i + 1, args[i]);
+			}
+			resultset = pre.executeQuery();
+			rsmd = resultset.getMetaData();
+
+			while (resultset.next()) {
+				entity = clazz.newInstance();
+				for (int i = 0; i < rsmd.getColumnCount(); i++) {
+					Object obj = resultset.getObject(i + 1);
+					String name = rsmd.getColumnName(i + 1);
+					// BeanUtils.setProCperty(entity, name, obj);
+					/*
+					 * 替换的方案用于没有引入上面这个get 和set赋值的包
+					 */
+					Field f = null;
+					try {
+						f = entity.getClass().getDeclaredField(name);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					f.setAccessible(true);
+					f.set(entity, obj);
+
+				}
+				entity_list.add(entity);
+			}
+		} catch (InstantiationException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO 自动生成的 catch 块
+			e.printStackTrace();
+		}
+
+		return entity_list;
+
+	}
+
+	/**
+	 * 可以根据别名的形式吧一个表查询的 结果给赋值给别名列表指定的类
+	 */
+	public <T> T select_entity_V(Class<T> clazz, String sql, Object... args) {
+		ArrayList<T> t = select_entitys_V(clazz, sql, args);
+		if (t.size() > 0)
+			return t.get(0);
+		return null;
+	}
+
+	/**
+	 * 用于反射的技术查询赋值 要求查询表的别名和类中的变量名字一致就可以完成查询
+	 * 
+	 * @param clazz
+	 * @param sql
+	 * @param args
+	 * @return
+	 */
+	public <T> ArrayList<T> select_entitys_V(Class<T> clazz, String sql, Object... args) {
+		ArrayList<T> data_list = new ArrayList();
+		try {
+			T entiy = null;
+			Map<String, Object> obj = new HashMap();
+			Object obj2;
+			pre = connection.prepareStatement(sql);
+			for (int i = 0; i < args.length; i++) {
+				pre.setObject(i + 1, args[i]);
+			}
+			resultset = pre.executeQuery();
+			// 获取这个结果集的元数据操作对象
+			rsmd = resultset.getMetaData();
+			// 获取这个sql语句 的别名列表
+			ArrayList<String> name_list = give_ColumnLabel();
+
+			while (resultset.next()) {
+				entiy = clazz.newInstance();
+
+				for (String t_name : name_list) {
+					obj2 = resultset.getObject(t_name);
+					obj.put(t_name, obj2);
+				}
+				// 传入空的实体对象，和它值的键值集合完成赋值
+				entiy = transformar_filedToValue(entiy, obj);
+				// 添加到这个实体的集合中
+				data_list.add(entiy);
+				obj = new HashMap();
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return data_list;
+
+	}
+
+	/**
+	 * 批量插入的方法 某个类的类的数据数组
+	 * 
+	 * @return
+	 */
+	public int bulk_insert(String sql, ArrayList<ArrayList> args, int count) {
+		if (sql == null || args == null || args.size() == 0 || count == 0) {
+			System.out.print("批量插入的方法失败，数据数组不能为空");
+			return 0;
+		}
+		int excute_count = args.size();
+		try {
+			pre = connection.prepareStatement(sql);
+			for (int i = 0; i < excute_count; i++) {
+				// 遍历每个数据的集合取出每一个值赋值
+				for (int j = 0; j < args.get(i).size(); j++) {
+					pre.setObject(j + 1, args.get(i).get(j));
+				}
+				pre.addBatch();
+				if ((i + 1) % count == 0) {
+					pre.executeBatch();
+					pre.clearBatch();
+				}
+			}
+			// 如果最后总的次数除以 次数不为0 那么最后多执行一次
+			if (excute_count % count != 0) {
+				// 执行插入清空批量执行积攒池
+				pre.executeBatch();
+				pre.clearBatch();
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return excute_count;
+
+	}
+
+	/**
+	 * 反射用于判断一个类中是否存在这个名字的字段
+	 * 
+	 * @param clz
+	 * @param fieldName
+	 * @return
+	 */
+	private boolean existsField(Class clz, String fieldName) {
+		try {
+			return clz.getDeclaredField(fieldName) != null;
+		} catch (Exception e) {
+		}
+		if (clz != Object.class) {
+			return existsField(clz.getSuperclass(), fieldName);
+		}
+		return false;
+	}
+
+	/**
+	 * 通过反射给变量赋值的方法
+	 */
+	private <T> T transformar_filedToValue(T entiy, Map<String, Object> obj) throws Exception, SecurityException {
+
+		for (Entry<String, Object> map : obj.entrySet()) {
+			String type_name = map.getKey();
+			Object obj2 = null;
+			if (map.getValue() != null)
+				obj2 = map.getValue();
+			// BeanUtils.setProperty(entiy, type_name, obj2);
+			boolean falg = existsField(entiy.getClass(), type_name);
+			// 如果存在才创建这个反射给它赋值
+			Class clazz = entiy.getClass();
+			if (falg) {
+				Field f = clazz.getDeclaredField(type_name);
+				// ½âËøÃ¿¸öµÃµ½µÄË½ÓÐÊý¾Ý¿ÉÒÔÊ¹Æä¿ÉÒÔ¸³Öµ
+				f.setAccessible(true);
+				f.set(entiy, obj2);
+			}
+		}
+
+		return entiy;
+
+	}
+
+	/**
+	 * 用来获取所有的结果集的别名数组
+	 * 
+	 * @return
+	 * @throws Exception
+	 */
+	private ArrayList<String> give_ColumnLabel() throws Exception {
+		ArrayList<String> list = new ArrayList();
+		for (int i = 0; i < rsmd.getColumnCount(); i++)
+			list.add(rsmd.getColumnLabel(i + 1));
+		return list;
+
+	}
+
+	/**
+	 * 传入语句执行 插入删除和修改 返回执行成功与否
+	 */
+	public boolean update(String sql, Object... arg) {
+		System.out.println(sql);
+		PreparedStatement pre = null;
+		int ma = 0;
+		try {
+			pre = connection.prepareStatement(sql);
+			for (int i = 0; i < arg.length; i++) {
+				pre.setObject(i + 1, arg[i]);
+
+				if (i == 0)
+					System.out.println(Arrays.toString(arg));
+
+			}
+			System.out.println("%" + pre);
+			ma = pre.executeUpdate();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ma == 1 ? true : false;
+
+	}
+
+	/**
+	 * 传入sql语句执行 返回一个查询的结果集
+	 */
+	public ResultSet select(String sql, Object... args) {
+
+		try {
+			pre = connection.prepareStatement(sql);
+			for (int i = 0; i < args.length; i++) {
+				pre.setObject((i + 1), args[i]);
+			}
+			resultset = pre.executeQuery(sql);
+			return resultset;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return resultset;
+
+	}
+
+	/**
+	 * get_assign_line 方法 的简化 查询一个表一列的值
+	 * 
+	 * @param table
+	 *            表名
+	 * @param field
+	 *            字段名
+	 * @return
+	 */
+	public ArrayList<String> get_row(String table, String field) {
+		return get_assign_line("select * from " + table, field);
+	}
+
+	/**
+	 * 封装的方法 传入查询语句查询一列某个值 防止sql注入的方法 需要?号传值
+	 * 
+	 * @param sql
+	 *            查询的语句
+	 * @param type_name
+	 *            查询一列的子段
+	 * @param args
+	 *            问号查值的替换条件
+	 * @return
+	 */
+	public ArrayList<String> get_assign_line(String sql, String type_name, Object... args) {
+		ArrayList<String> list = null;
+		try {
+			pre = connection.prepareStatement(sql);
+			for (int i = 0; i < args.length; i++) {
+				pre.setObject((i + 1), args[i]);
+			}
+			resultset = pre.executeQuery();
+
+			list = new ArrayList();
+			while (resultset.next()) {
+				Object o = null;
+				o = resultset.getObject(type_name);
+				list.add(o.toString());
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return list;
+
+	}
+
+	/***
+	 * 查询指定一个表的一列某个值是否存在 不存在返回null 防止sql注入的方法，但不能问号传值的方式判断
+	 * 
+	 * @param from
+	 * @param type
+	 * @param value
+	 * @return
+	 */
+	private boolean is_existst(String from, String type, String value) {
+		ResultSet set = null;
+		String t = null;
+		try {
+			set = select("select * from " + from + " where " + type + " = '" + value + "'");
+			while (set.next()) {
+				t = set.getString(type);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if (t != null)
+			return true;
+		else
+			return false;
+
+	}
+
+	/**
+	 * 传入值关闭数据库的方法
+	 * 
+	 * @return
+	 */
+
+	public void tryoff_jdbc(Connection connection, ResultSet resultset, Statement statement) {
+		try {
+			if (resultset != null)
+				resultset.close();
+			if (statement != null)
+				statement.close();
+			if (connection != null)
+				connection.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 自动关闭本类数据库的方法
+	 */
+	public void offjdbc_util() {
+		try {
+			if (resultset != null)
+				resultset.close();
+			if (statement != null)
+				statement.close();
+			if (pre != null)
+				pre.close();
+			if (connection != null)
+				connection.close();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	// @Test
+	/**
+	 * 批量插入的测试方法
+	 */
+	private void bulk_insert_text() {
+		getConnection();
+		ArrayList<ArrayList> sA = new ArrayList();
+		for (int i = 0; i < 100; i++) {
+			ArrayList<Object> s = new ArrayList();
+			for (int j = 0; j < 3; j++) {
+				if (j == 0)
+					s.add(i);
+				else if (j == 1)
+					s.add("a" + i);
+				else {
+					s.add(i);
+				}
+			}
+			sA.add(s);
+		}
+		System.out.println(sA.size());
+		int c = bulk_insert("insert into big_statistics values(?,?,?)", sA, 45);
+	}
+
+	public static void main(String[] args) {
+		new J_Util().text();
+	}
+	// Class tc = topmanager.class;
+	// tc.getDeclaredFields();
+
+	class ParamSourcer {
+
+		// 值的map和对应的实列对象
+		Map<String, Object> map = new HashMap<String, Object>();
+		private Object obj;
+
+		public Map<String, Object> getFiledsMap() {
+			Field[] f2 = obj.getClass().getDeclaredFields();
+
+			try {
+				for (Field c : f2) {
+					String filedname = c.getName();
+					c.setAccessible(true);
+					map.put(filedname, c.get(obj));
+				}
+
+			} catch (Exception e) {
+				System.out.println("出现错误必须初入的是一个对象的实列");
+				e.printStackTrace();
+			}
+			return map;
+		}
+
+		public ParamSourcer(Object obj) {
+			this.obj = obj;
+		}
+	}
+	/**
+	 * 插入方法 ,具名参数形式
+	 * 
+	 * @param sql
+	 * @param param
+	 */
+	public void insert(String sql, ParamSourcer param) {
+		Map<String, Object> filedlist = param.getFiledsMap();
+		System.out.println(filedlist);
+
+		List<Object> list = new ArrayList();
+		String sql2 = sql.substring(sql.indexOf("(") + 1, sql.indexOf(")"));
+
+		String[] fname = null;
+		try {
+
+			fname = sql2.split(",");
+		} catch (Exception e) {
+			fname = new String[] { sql2 };
+		}
+		for (String namet : fname) {
+			list.add(filedlist.get(namet));
+		}
+		update(sql, list.toArray());
+	}
+
+	/**
+	 * 传入一个实体类自动赋值到对应的表中去 传入实体 ，自动完成赋值的方法 这个插入方法要求必须实体中的变量和表中字段完全名字完全一致，不可以多出来字段
+	 * 
+	 * @param cla
+	 *            实体
+	 * @param table
+	 *            一个表
+	 */
+	public <T> void insert(String table, T cla) {
+		Field[] f2 = cla.getClass().getDeclaredFields();
+		// 获取所有
+
+		// 下面这一步就获取到了这个实列的所有变量名和对应的值
+		ArrayList nameList = new ArrayList<String>();
+		// 这个语句是拼接插入语句的名称列表
+		String insert_s = "(";
+		// 这是对应的？号值替换列表
+		String question_s = "(";
+		ArrayList<Object> value = new ArrayList();
+		for (int i = 0; i < f2.length; i++) {
+			Field f1 = f2[i];
+			nameList.add(f1.getName());
+			question_s += "?";
+			try {
+				f1.setAccessible(true);
+				value.add(f1.get(cla));
+				insert_s += "`" + f1.getName() + "`";
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			if (i != f2.length - 1) {
+				insert_s += ",";
+				question_s += ",";
+			}
+		}
+		insert_s += ")";
+		question_s += ")";
+		String sql = "insert into " + table + insert_s + " values" + question_s;
+		update(sql, value.toArray());
+	}
+
+	// @Test
+	private void text() {
+		getConnection();
+		System.out.println();
+
+	}
+
+}

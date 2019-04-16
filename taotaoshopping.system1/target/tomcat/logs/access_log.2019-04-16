@@ -1,0 +1,16 @@
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:13:44:10 +0800] "GET /index.jsp HTTP/1.1" 404 - http-bio-8082-exec-1 0
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:03:05 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=d4e25c7b-f0f8-4598-99ac-37a0a83c9741 HTTP/1.1" 200 265 http-bio-8082-exec-4 1311
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:19:35 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=d4e25c7b-f0f8-4598-99ac-37a0a83c9741 HTTP/1.1" 200 265 http-bio-8082-exec-1 287
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:19:58 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=d4e25c7b-f0f8-4598-99ac-37a0a83c97412 HTTP/1.1" 200 265 http-bio-8082-exec-2 4
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:20:39 +0800] "GET /taotaoshopping.system1/file/index.jsp HTTP/1.1" 200 265 http-bio-8082-exec-3 4
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:22:51 +0800] "GET /taotaoshopping.system1/file/index.jsp HTTP/1.1" 200 265 http-bio-8082-exec-5 29
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:29:13 +0800] "GET /taotaoshopping.system1/file/index.jsp HTTP/1.1" 302 - http-bio-8082-exec-1 47
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:44:09 +0800] "GET /taotaoshopping.system1/file/index.jsp HTTP/1.1" 302 - http-bio-8082-exec-1 50
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:47:14 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=17655ed1-fa29-4adc-97e3-4e74cb98ef6a HTTP/1.1" 200 265 http-bio-8082-exec-3 541
+127.0.0.1 - - [16/Apr/2019:14:50:37 +0800] "POST /taotaoshopping.system1/st/inpuse.do HTTP/1.1" 302 - http-bio-8082-exec-5 1480
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:51:04 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=17655ed1-fa29-4adc-97e3-4e74cb98ef6a HTTP/1.1" 302 - http-bio-8082-exec-7 3
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:52:27 +0800] "GET /taotaoshopping.system1/file/index.jsp HTTP/1.1" 302 - http-bio-8082-exec-10 33
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:52:41 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=6d26d558-eae9-4242-b4b2-4cae241d5edd HTTP/1.1" 200 265 http-bio-8082-exec-10 5
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:14:58:43 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=6d26d558-eae9-4242-b4b2-4cae241d5edd HTTP/1.1" 200 265 http-bio-8082-exec-3 3
+0:0:0:0:0:0:0:1 - - [16/Apr/2019:15:01:51 +0800] "GET /taotaoshopping.system1/file/index.jsp?token=6d26d558-eae9-4242-b4b2-4cae241d5edd HTTP/1.1" 200 265 http-bio-8082-exec-6 8
+127.0.0.1 - - [16/Apr/2019:15:02:39 +0800] "POST /taotaoshopping.system1/st/inpuse.do HTTP/1.1" 302 - http-bio-8082-exec-8 7
